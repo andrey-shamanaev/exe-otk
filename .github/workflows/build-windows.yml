@@ -1,0 +1,53 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE
+        run: |
+          pyinstaller build.spec --noconfirm --clean
+
+      - name: Prepare artifact folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist_pack | Out-Null
+          Copy-Item "dist\Тест_СП_53.exe" -Destination "dist_pack\Тест_СП_53.exe"
+          @"
+          Тест по СП 53-101-98 — портативное приложение
+
+          1. Положите Тест_СП_53.exe в папку на сетевом диске.
+          2. Рядом с exe должны лежать:
+             - questions.json
+             - results.json  (можно пустой массив [])
+             - lock.json     (можно {"until":0})
+             - 1.png … 37.png
+          3. Запускайте exe (или ярлык на него).
+          4. Пароль администратора по умолчанию: admin
+          "@ | Set-Content -Path "dist_pack\README_размещение.txt" -Encoding UTF8
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SP53-Test-Windows
+          path: dist_pack/
+          if-no-files-found: error
